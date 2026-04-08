@@ -1,0 +1,13 @@
+[project]
+name = "simple-reach-openenv"
+version = "0.1.0"
+description = "Minimal OpenEnv submission for the Meta PyTorch OpenEnv Hackathon."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "gymnasium==0.29.1",
+  "numpy",
+  "openai",
+  "fastapi",
+  "uvicorn",
+]
