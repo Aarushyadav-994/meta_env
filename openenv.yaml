@@ -16,6 +16,9 @@ api:
     tasks:
       method: GET
       path: /tasks
+    grader:
+      method: POST
+      path: /grader
 tasks:
   - id: simple_reach_task_0
     name: reach-positive-ten
