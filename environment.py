@@ -92,6 +92,9 @@ class SimpleReachEnv(gym.Env):
         }
         return observation, reward, terminated, truncated, info
 
+    def close(self) -> None:
+        return None
+
 
 if __name__ == "__main__":
     env = SimpleReachEnv(task_id=0)

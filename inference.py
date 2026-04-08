@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 
 from fastapi import FastAPI
@@ -49,8 +48,25 @@ class HealthResponse(BaseModel):
     endpoints: list[str]
 
 
-def log_event(prefix: str, payload: dict) -> None:
-    print(f"{prefix} {json.dumps(payload, sort_keys=True)}", flush=True)
+def log_start(task: str, env: str, model: str) -> None:
+    print(f"[START] task={task} env={env} model={model}", flush=True)
+
+
+def log_step(step: int, action: str, reward: float, done: bool, error: str | None) -> None:
+    error_value = error if error else "null"
+    done_value = str(done).lower()
+    print(
+        f"[STEP] step={step} action={action} reward={reward:.2f} done={done_value} error={error_value}",
+        flush=True,
+    )
+
+
+def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> None:
+    rewards_value = ",".join(f"{reward:.2f}" for reward in rewards)
+    print(
+        f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_value}",
+        flush=True,
+    )
 
 
 def parse_action(text: str) -> int:
@@ -130,9 +146,12 @@ def main() -> None:
     api_base_url = os.getenv("API_BASE_URL")
     model_name = os.getenv("MODEL_NAME", "")
     hf_token = os.getenv("HF_TOKEN", "")
+    local_image_name = os.getenv("LOCAL_IMAGE_NAME", "")
     task_id = int(os.getenv("TASK_ID", "0"))
     max_steps = int(os.getenv("MAX_STEPS", "32"))
     use_model = bool(api_base_url and model_name and hf_token)
+    task_name = os.getenv("TASK_NAME", f"simple-reach-task-{task_id}")
+    benchmark = os.getenv("BENCHMARK", "simple-reach")
 
     client_kwargs = {"api_key": hf_token or "unused"}
     if api_base_url:
@@ -141,80 +160,61 @@ def main() -> None:
 
     env = SimpleReachEnv(task_id=task_id, max_steps=max_steps)
     observation, info = env.reset()
-
-    log_event(
-        "[START]",
-        {
-            "api_base_url": api_base_url,
-            "model_name": model_name,
-            "task_id": task_id,
-            "target_position": info["target_position"],
-            "use_model": use_model,
-        },
-    )
-
+    log_start(task=task_name, env=benchmark, model=model_name or "unset-model")
     total_reward = 0.0
     terminated = False
     truncated = False
     steps_executed = 0
+    rewards: list[float] = []
+    success = False
 
-    for step_index in range(max_steps):
-        position = float(observation[0])
-        target_position = float(observation[1])
+    try:
+        for step_index in range(1, max_steps + 1):
+            position = float(observation[0])
+            target_position = float(observation[1])
+            action_error: str | None = None
 
-        try:
-            if use_model:
-                action, raw_response = choose_action(
-                    client=client,
-                    model_name=model_name,
-                    position=position,
-                    target_position=target_position,
-                    step_index=step_index,
-                )
-                policy_source = "model"
-            else:
-                action = fallback_action(
-                    position=position, target_position=target_position
-                )
-                raw_response = "model configuration missing"
-                policy_source = "fallback"
-        except Exception as exc:
-            action = fallback_action(position=position, target_position=target_position)
-            raw_response = str(exc)
-            policy_source = "fallback"
+            try:
+                if use_model:
+                    action, _ = choose_action(
+                        client=client,
+                        model_name=model_name,
+                        position=position,
+                        target_position=target_position,
+                        step_index=step_index,
+                    )
+                else:
+                    action = fallback_action(
+                        position=position, target_position=target_position
+                    )
+            except Exception as exc:
+                action = fallback_action(position=position, target_position=target_position)
+                action_error = str(exc)
 
-        observation, reward, terminated, truncated, info = env.step(action)
-        total_reward += reward
-        steps_executed = step_index + 1
+            action_str = "left" if action == 0 else "right"
+            observation, reward, terminated, truncated, info = env.step(action)
+            done = bool(terminated or truncated)
+            total_reward += reward
+            rewards.append(reward)
+            steps_executed = step_index
 
-        log_event(
-            "[STEP]",
-            {
-                "action": action,
-                "distance_to_target": info["distance_to_target"],
-                "observation": observation.tolist(),
-                "policy_source": policy_source,
-                "raw_response": raw_response,
-                "reward": reward,
-                "step_index": step_index,
-                "terminated": terminated,
-                "truncated": truncated,
-            },
-        )
+            log_step(
+                step=step_index,
+                action=action_str,
+                reward=reward,
+                done=done,
+                error=action_error,
+            )
 
-        if terminated or truncated:
-            break
+            if done:
+                break
 
-    log_event(
-        "[END]",
-        {
-            "steps_executed": steps_executed,
-            "task_id": task_id,
-            "terminated": terminated,
-            "total_reward": total_reward,
-            "truncated": truncated,
-        },
-    )
+        score = total_reward / max_steps if max_steps > 0 else 0.0
+        score = min(max(score, 0.0), 1.0)
+        success = bool(score > 0.0 and (terminated or truncated or steps_executed > 0))
+    finally:
+        env.close()
+        log_end(success=success, steps=steps_executed, score=score if 'score' in locals() else 0.0, rewards=rewards)
 
 
 if __name__ == "__main__":
