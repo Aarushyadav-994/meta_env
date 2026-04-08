@@ -2,8 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY environment.py graders.py inference.py openenv.yaml pyproject.toml README.md requirements.txt tasks.py uv.lock /app/
+COPY environment.py inference.py openenv.yaml pyproject.toml README.md requirements.txt uv.lock /app/
+COPY graders /app/graders
 COPY server /app/server
+COPY tasks /app/tasks
 
 RUN pip install --no-cache-dir -r requirements.txt
 
