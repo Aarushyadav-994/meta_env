@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from environment import SimpleReachEnv
 from models import ReachAction, ReachObservation, ReachState
-from tasks import TASKS
+from tasks import TASKS, TASK_ID_TO_INDEX
 
 app = FastAPI(title="Simple Reach OpenEnv Service", version="0.1.0")
 ENV = SimpleReachEnv(task_id=int(os.getenv("TASK_ID", "0")))
@@ -19,7 +19,7 @@ LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
 
 class ResetRequest(BaseModel):
-    task_id: int = 0
+    task_id: str | int = "reach_positive_ten"
     seed: int | None = None
     start_position: float | None = None
 
@@ -75,6 +75,15 @@ class MCPResponse(BaseModel):
     jsonrpc: str
     id: str | int | None
     result: dict
+
+
+class GradeRequest(BaseModel):
+    action: dict
+    ground_truth: dict | None = None
+
+
+class GradeResponse(BaseModel):
+    score: float
 
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -171,7 +180,12 @@ def schema() -> SchemaResponse:
 
 @app.post("/reset", response_model=EnvResponse)
 def reset_env(request: ResetRequest = Body(default=ResetRequest())) -> EnvResponse:
-    options: dict[str, object] = {"task_id": request.task_id}
+    task_value = request.task_id
+    if isinstance(task_value, str):
+        mapped_task_id = TASK_ID_TO_INDEX.get(task_value, 0)
+    else:
+        mapped_task_id = int(task_value)
+    options: dict[str, object] = {"task_id": mapped_task_id}
     if request.start_position is not None:
         options["start_position"] = request.start_position
     observation, info = ENV.reset(seed=request.seed, options=options)
@@ -195,9 +209,36 @@ def state_env() -> StateResponse:
     return StateResponse(**ENV.state())
 
 
-@app.get("/tasks", response_model=TaskListResponse)
-def tasks_env() -> TaskListResponse:
-    return TaskListResponse(tasks=TASKS)
+@app.get("/tasks", response_model=list[dict])
+def tasks_env() -> list[dict]:
+    return TASKS
+
+
+@app.post("/grader", response_model=GradeResponse)
+def grader(req: GradeRequest) -> GradeResponse:
+    task_id = req.action.get("task_id", "reach_positive_ten")
+    action_value = req.action.get("action")
+    if action_value is None:
+        action_value = req.action.get("response")
+
+    if isinstance(action_value, str):
+        normalized = action_value.strip().lower()
+        if normalized in {"left", "0"}:
+            action_int = 0
+        elif normalized in {"right", "1"}:
+            action_int = 1
+        else:
+            action_int = 1
+    else:
+        action_int = int(action_value)
+
+    expected = {
+        "reach_positive_ten": 1,
+        "reach_negative_ten": 0,
+        "reach_positive_five": 1,
+    }.get(str(task_id), 1)
+    score = 1.0 if action_int == expected else 0.0
+    return GradeResponse(score=score)
 
 
 @app.post("/mcp", response_model=MCPResponse)
