@@ -4,4 +4,5 @@ TASK = {
     "description": "Start at 0 and reach target position 10.0 on a 1D line.",
     "reset_params": {"task_id": 0},
     "grader": "graders.task_0:grade",
+    "graders": ["graders.task_0:grade"],
 }
