@@ -9,17 +9,26 @@ from gymnasium import spaces
 
 class SimpleReachEnv(gym.Env):
     metadata = {"render_modes": [], "render_fps": 4}
+    TASK_TARGETS = {
+        0: 10.0,
+        1: -10.0,
+        2: 5.0,
+    }
 
-    def __init__(self, target_position: float = 10.0, max_steps: int = 32) -> None:
+    def __init__(self, task_id: int = 0, max_steps: int = 32) -> None:
         super().__init__()
-        self.target_position = float(target_position)
+        if task_id not in self.TASK_TARGETS:
+            raise ValueError(f"Unsupported task_id: {task_id}")
+
+        self.task_id = int(task_id)
+        self.target_position = float(self.TASK_TARGETS[self.task_id])
         self.max_steps = int(max_steps)
 
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(
-            low=np.array([-np.inf], dtype=np.float32),
-            high=np.array([np.inf], dtype=np.float32),
-            shape=(1,),
+            low=np.array([-np.inf, -np.inf], dtype=np.float32),
+            high=np.array([np.inf, np.inf], dtype=np.float32),
+            shape=(2,),
             dtype=np.float32,
         )
 
@@ -33,11 +42,20 @@ class SimpleReachEnv(gym.Env):
         self.position = 0.0
         self.steps_taken = 0
 
+        if options and "task_id" in options:
+            new_task_id = int(options["task_id"])
+            if new_task_id not in self.TASK_TARGETS:
+                raise ValueError(f"Unsupported task_id: {new_task_id}")
+            self.task_id = new_task_id
+            self.target_position = float(self.TASK_TARGETS[self.task_id])
+
         if options and "start_position" in options:
             self.position = float(options["start_position"])
 
-        observation = np.array([self.position], dtype=np.float32)
-        info = {"target_position": self.target_position}
+        observation = np.array(
+            [self.position, self.target_position], dtype=np.float32
+        )
+        info = {"task_id": self.task_id, "target_position": self.target_position}
         return observation, info
 
     def step(
@@ -50,31 +68,47 @@ class SimpleReachEnv(gym.Env):
         self.position += movement
         self.steps_taken += 1
 
-        reached_target = bool(self.position >= self.target_position)
+        distance_to_target = abs(self.target_position - self.position)
+        reached_target = bool(distance_to_target <= 0.0)
         terminated = reached_target
         truncated = self.steps_taken >= self.max_steps and not terminated
-        reward = 1.0 if reached_target else -0.01
+        reward = float(1.0 / (distance_to_target + 2.0))
 
-        observation = np.array([self.position], dtype=np.float32)
+        observation = np.array(
+            [self.position, self.target_position], dtype=np.float32
+        )
         info = {
+            "task_id": self.task_id,
             "target_position": self.target_position,
-            "distance_to_target": float(self.target_position - self.position),
+            "distance_to_target": float(distance_to_target),
         }
         return observation, reward, terminated, truncated, info
 
 
 if __name__ == "__main__":
-    env = SimpleReachEnv()
+    env = SimpleReachEnv(task_id=0)
     observation, info = env.reset()
-    print("reset:", observation, info)
+    print("reset:", observation.tolist(), info)
 
     for step_idx in range(10):
         action = env.action_space.sample()
         observation, reward, terminated, truncated, info = env.step(action)
         print(
-            f"step={step_idx} action={action} obs={observation} "
-            f"reward={reward} terminated={terminated} truncated={truncated} info={info}"
+            "step:",
+            step_idx,
+            "action:",
+            action,
+            "obs:",
+            observation.tolist(),
+            "reward:",
+            reward,
+            "terminated:",
+            terminated,
+            "truncated:",
+            truncated,
+            "info:",
+            info,
         )
         if terminated or truncated:
             observation, info = env.reset()
-            print("reset:", observation, info)
+            print("reset:", observation.tolist(), info)

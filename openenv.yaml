@@ -1,0 +1,13 @@
+name: simple-reach-openenv
+version: 0.1.0
+entry_point: environment:SimpleReachEnv
+tasks:
+  - task_id: 0
+    name: reach-positive-ten
+    grader: simple-reach-task-0-grader
+  - task_id: 1
+    name: reach-negative-ten
+    grader: simple-reach-task-1-grader
+  - task_id: 2
+    name: reach-positive-five
+    grader: simple-reach-task-2-grader

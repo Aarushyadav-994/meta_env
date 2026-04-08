@@ -1,7 +1,15 @@
 # Simple Reach Environment
 
-This project is a minimal, submission-ready reinforcement learning environment for the Meta PyTorch OpenEnv Hackathon Round 1.
+Minimal submission-ready repository for the Meta PyTorch OpenEnv Hackathon.
 
-`SimpleReachEnv` is a Gymnasium-compatible 1D coordinate reach task where the agent starts at position `0.0` and must reach the target at `10.0`.
+## Run the validator
 
-The environment is intentionally simple, uses the Gymnasium 0.29+ API, and is packaged with metadata and a lightweight Dockerfile for straightforward evaluation and submission.
+Point your OpenEnv validator at `openenv.yaml`.
+
+## Run inference
+
+Set `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN`, then run:
+
+```bash
+python inference.py
+```
