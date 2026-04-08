@@ -1,3 +1,13 @@
+---
+title: Simple Reach OpenEnv
+emoji: robot
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # Simple Reach Environment
 
 Minimal submission-ready repository for the Meta PyTorch OpenEnv Hackathon.
