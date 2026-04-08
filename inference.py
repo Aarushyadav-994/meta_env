@@ -10,6 +10,10 @@ from environment import SimpleReachEnv
 
 app = FastAPI(title="Simple Reach OpenEnv Service", version="0.1.0")
 ENV = SimpleReachEnv(task_id=int(os.getenv("TASK_ID", "0")))
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
 
 class ResetRequest(BaseModel):
@@ -143,24 +147,20 @@ def state_env() -> StateResponse:
 
 
 def main() -> None:
-    api_base_url = os.getenv("API_BASE_URL")
-    model_name = os.getenv("MODEL_NAME", "")
-    hf_token = os.getenv("HF_TOKEN", "")
-    local_image_name = os.getenv("LOCAL_IMAGE_NAME", "")
     task_id = int(os.getenv("TASK_ID", "0"))
     max_steps = int(os.getenv("MAX_STEPS", "32"))
-    use_model = bool(api_base_url and model_name and hf_token)
+    use_model = bool(API_BASE_URL and MODEL_NAME and HF_TOKEN)
     task_name = os.getenv("TASK_NAME", f"simple-reach-task-{task_id}")
     benchmark = os.getenv("BENCHMARK", "simple-reach")
 
-    client_kwargs = {"api_key": hf_token or "unused"}
-    if api_base_url:
-        client_kwargs["base_url"] = api_base_url
+    client_kwargs = {"api_key": HF_TOKEN or "unused"}
+    if API_BASE_URL:
+        client_kwargs["base_url"] = API_BASE_URL
     client = OpenAI(**client_kwargs)
 
     env = SimpleReachEnv(task_id=task_id, max_steps=max_steps)
     observation, info = env.reset()
-    log_start(task=task_name, env=benchmark, model=model_name or "unset-model")
+    log_start(task=task_name, env=benchmark, model=MODEL_NAME)
     total_reward = 0.0
     terminated = False
     truncated = False
@@ -178,7 +178,7 @@ def main() -> None:
                 if use_model:
                     action, _ = choose_action(
                         client=client,
-                        model_name=model_name,
+                        model_name=MODEL_NAME,
                         position=position,
                         target_position=target_position,
                         step_index=step_index,
