@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY environment.py inference.py openenv.yaml pyproject.toml README.md requirements.txt uv.lock /app/
+COPY __init__.py client.py environment.py inference.py models.py openenv.yaml pyproject.toml README.md requirements.txt uv.lock /app/
 COPY graders /app/graders
 COPY server /app/server
 COPY tasks /app/tasks
