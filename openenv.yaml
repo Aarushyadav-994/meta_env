@@ -1,13 +1,37 @@
 name: simple-reach-openenv
 version: 0.1.0
 entry_point: environment:SimpleReachEnv
+api:
+  base_url: /
+  endpoints:
+    reset:
+      method: POST
+      path: /reset
+    step:
+      method: POST
+      path: /step
+    state:
+      method: GET
+      path: /state
+    tasks:
+      method: GET
+      path: /tasks
 tasks:
-  - task_id: 0
+  - id: simple_reach_task_0
     name: reach-positive-ten
-    grader: simple-reach-task-0-grader
-  - task_id: 1
+    description: Start at 0 and reach target position 10.0 on a 1D line.
+    reset_params:
+      task_id: 0
+    grader: graders:grade_task_0
+  - id: simple_reach_task_1
     name: reach-negative-ten
-    grader: simple-reach-task-1-grader
-  - task_id: 2
+    description: Start at 0 and reach target position -10.0 on a 1D line.
+    reset_params:
+      task_id: 1
+    grader: graders:grade_task_1
+  - id: simple_reach_task_2
     name: reach-positive-five
-    grader: simple-reach-task-2-grader
+    description: Start at 0 and reach target position 5.0 on a 1D line.
+    reset_params:
+      task_id: 2
+    grader: graders:grade_task_2

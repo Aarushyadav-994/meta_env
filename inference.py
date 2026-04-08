@@ -7,6 +7,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from environment import SimpleReachEnv
+from tasks import TASKS
 
 app = FastAPI(title="Simple Reach OpenEnv Service", version="0.1.0")
 ENV = SimpleReachEnv(task_id=int(os.getenv("TASK_ID", "0")))
@@ -50,6 +51,10 @@ class StateResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     endpoints: list[str]
+
+
+class TaskListResponse(BaseModel):
+    tasks: list[dict]
 
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -144,6 +149,11 @@ def step_env(request: StepRequest) -> StepResponse:
 @app.get("/state", response_model=StateResponse)
 def state_env() -> StateResponse:
     return StateResponse(**ENV.state())
+
+
+@app.get("/tasks", response_model=TaskListResponse)
+def tasks_env() -> TaskListResponse:
+    return TaskListResponse(tasks=TASKS)
 
 
 def main() -> None:
