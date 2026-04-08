@@ -8,8 +8,8 @@ TASKS = [
         "max_steps": 32,
         "reset_params": {"task_id": 0},
         "action_schema": {"action": "0 for left, 1 for right", "task_id": "reach_positive_ten"},
-        "grader": "graders.task_0:grade",
-        "graders": ["graders.task_0:grade"],
+        "grader": "graders:grade_task_0",
+        "graders": ["graders:grade_task_0"],
         "reward_range": [0.0, 1.0],
     },
     {
@@ -21,8 +21,8 @@ TASKS = [
         "max_steps": 32,
         "reset_params": {"task_id": 1},
         "action_schema": {"action": "0 for left, 1 for right", "task_id": "reach_negative_ten"},
-        "grader": "graders.task_1:grade",
-        "graders": ["graders.task_1:grade"],
+        "grader": "graders:grade_task_1",
+        "graders": ["graders:grade_task_1"],
         "reward_range": [0.0, 1.0],
     },
     {
@@ -34,8 +34,8 @@ TASKS = [
         "max_steps": 32,
         "reset_params": {"task_id": 2},
         "action_schema": {"action": "0 for left, 1 for right", "task_id": "reach_positive_five"},
-        "grader": "graders.task_2:grade",
-        "graders": ["graders.task_2:grade"],
+        "grader": "graders:grade_task_2",
+        "graders": ["graders:grade_task_2"],
         "reward_range": [0.0, 1.0],
     },
 ]
