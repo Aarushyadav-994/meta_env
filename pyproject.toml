@@ -5,9 +5,13 @@ description = "Minimal OpenEnv submission for the Meta PyTorch OpenEnv Hackathon
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "openenv-core>=0.2.0",
   "gymnasium==0.29.1",
   "numpy",
   "openai",
   "fastapi",
   "uvicorn",
 ]
+
+[project.scripts]
+server = "server.app:main"
