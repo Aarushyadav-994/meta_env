@@ -1,6 +1,6 @@
 ---
 title: Simple Reach OpenEnv
-emoji: robot
+emoji: 🤖
 colorFrom: blue
 colorTo: green
 sdk: docker
