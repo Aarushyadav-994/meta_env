@@ -7,6 +7,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from environment import SimpleReachEnv
+from models import ReachAction, ReachObservation, ReachState
 from tasks import TASKS
 
 app = FastAPI(title="Simple Reach OpenEnv Service", version="0.1.0")
@@ -55,6 +56,25 @@ class HealthResponse(BaseModel):
 
 class TaskListResponse(BaseModel):
     tasks: list[dict]
+
+
+class MetadataResponse(BaseModel):
+    name: str
+    description: str
+    version: str
+    tasks: list[dict]
+
+
+class SchemaResponse(BaseModel):
+    action: dict
+    observation: dict
+    state: dict
+
+
+class MCPResponse(BaseModel):
+    jsonrpc: str
+    id: str | int | None
+    result: dict
 
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -125,6 +145,30 @@ def healthz() -> HealthResponse:
     return HealthResponse(status="ok", endpoints=["/reset", "/step", "/state"])
 
 
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "healthy"}
+
+
+@app.get("/metadata", response_model=MetadataResponse)
+def metadata() -> MetadataResponse:
+    return MetadataResponse(
+        name="simple-reach-openenv",
+        description="Minimal 1D reach environment with three task variants and graders.",
+        version="0.1.0",
+        tasks=TASKS,
+    )
+
+
+@app.get("/schema", response_model=SchemaResponse)
+def schema() -> SchemaResponse:
+    return SchemaResponse(
+        action=ReachAction.model_json_schema(),
+        observation=ReachObservation.model_json_schema(),
+        state=ReachState.model_json_schema(),
+    )
+
+
 @app.post("/reset", response_model=EnvResponse)
 def reset_env(request: ResetRequest = Body(default=ResetRequest())) -> EnvResponse:
     options: dict[str, object] = {"task_id": request.task_id}
@@ -154,6 +198,16 @@ def state_env() -> StateResponse:
 @app.get("/tasks", response_model=TaskListResponse)
 def tasks_env() -> TaskListResponse:
     return TaskListResponse(tasks=TASKS)
+
+
+@app.post("/mcp", response_model=MCPResponse)
+def mcp(payload: dict = Body(default_factory=dict)) -> MCPResponse:
+    request_id = payload.get("id")
+    return MCPResponse(
+        jsonrpc="2.0",
+        id=request_id,
+        result={"status": "ok"},
+    )
 
 
 def main() -> None:
