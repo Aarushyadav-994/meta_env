@@ -3,9 +3,50 @@ from __future__ import annotations
 import json
 import os
 
+from fastapi import FastAPI
 from openai import OpenAI
+from pydantic import BaseModel
 
 from environment import SimpleReachEnv
+
+app = FastAPI(title="Simple Reach OpenEnv Service", version="0.1.0")
+ENV = SimpleReachEnv(task_id=int(os.getenv("TASK_ID", "0")))
+
+
+class ResetRequest(BaseModel):
+    task_id: int = 0
+    seed: int | None = None
+    start_position: float | None = None
+
+
+class StepRequest(BaseModel):
+    action: int
+
+
+class EnvResponse(BaseModel):
+    observation: list[float]
+    info: dict
+
+
+class StepResponse(BaseModel):
+    observation: list[float]
+    reward: float
+    terminated: bool
+    truncated: bool
+    info: dict
+
+
+class StateResponse(BaseModel):
+    task_id: int
+    position: float
+    target_position: float
+    steps_taken: int
+    max_steps: int
+
+
+class HealthResponse(BaseModel):
+    status: str
+    endpoints: list[str]
 
 
 def log_event(prefix: str, payload: dict) -> None:
@@ -47,6 +88,42 @@ def choose_action(
     )
     content = response.choices[0].message.content or ""
     return parse_action(content), content
+
+
+@app.get("/", response_model=HealthResponse)
+def root() -> HealthResponse:
+    return HealthResponse(status="ok", endpoints=["/reset", "/step", "/state"])
+
+
+@app.get("/healthz", response_model=HealthResponse)
+def healthz() -> HealthResponse:
+    return HealthResponse(status="ok", endpoints=["/reset", "/step", "/state"])
+
+
+@app.post("/reset", response_model=EnvResponse)
+def reset_env(request: ResetRequest) -> EnvResponse:
+    options: dict[str, object] = {"task_id": request.task_id}
+    if request.start_position is not None:
+        options["start_position"] = request.start_position
+    observation, info = ENV.reset(seed=request.seed, options=options)
+    return EnvResponse(observation=observation.tolist(), info=info)
+
+
+@app.post("/step", response_model=StepResponse)
+def step_env(request: StepRequest) -> StepResponse:
+    observation, reward, terminated, truncated, info = ENV.step(request.action)
+    return StepResponse(
+        observation=observation.tolist(),
+        reward=reward,
+        terminated=terminated,
+        truncated=truncated,
+        info=info,
+    )
+
+
+@app.get("/state", response_model=StateResponse)
+def state_env() -> StateResponse:
+    return StateResponse(**ENV.state())
 
 
 def main() -> None:

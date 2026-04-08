@@ -35,6 +35,15 @@ class SimpleReachEnv(gym.Env):
         self.position = 0.0
         self.steps_taken = 0
 
+    def state(self) -> dict[str, float | int]:
+        return {
+            "task_id": self.task_id,
+            "position": float(self.position),
+            "target_position": float(self.target_position),
+            "steps_taken": int(self.steps_taken),
+            "max_steps": int(self.max_steps),
+        }
+
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[np.ndarray, dict[str, Any]]:
@@ -55,7 +64,7 @@ class SimpleReachEnv(gym.Env):
         observation = np.array(
             [self.position, self.target_position], dtype=np.float32
         )
-        info = {"task_id": self.task_id, "target_position": self.target_position}
+        info = self.state()
         return observation, info
 
     def step(
@@ -78,8 +87,7 @@ class SimpleReachEnv(gym.Env):
             [self.position, self.target_position], dtype=np.float32
         )
         info = {
-            "task_id": self.task_id,
-            "target_position": self.target_position,
+            **self.state(),
             "distance_to_target": float(distance_to_target),
         }
         return observation, reward, terminated, truncated, info
