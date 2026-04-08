@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI
+from fastapi import Body, FastAPI
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -121,7 +121,7 @@ def healthz() -> HealthResponse:
 
 
 @app.post("/reset", response_model=EnvResponse)
-def reset_env(request: ResetRequest) -> EnvResponse:
+def reset_env(request: ResetRequest = Body(default=ResetRequest())) -> EnvResponse:
     options: dict[str, object] = {"task_id": request.task_id}
     if request.start_position is not None:
         options["start_position"] = request.start_position
